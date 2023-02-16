@@ -90,10 +90,10 @@ F1_bar = zeros(NY,NX);
 F2_bar = zeros(NY,NX);
 F3_bar = zeros(NY,NX);
 F4_bar = zeros(NY,NX);
-diff_U1 = zeros(NY,NX);
-diff_U2 = zeros(NY,NX);
-diff_U3 = zeros(NY,NX);
-diff_U4 = zeros(NY,NX);
+%diff_U1 = zeros(NY,NX);
+%diff_U2 = zeros(NY,NX);
+%diff_U3 = zeros(NY,NX);
+%diff_U4 = zeros(NY,NX);
 
 % Load functions
 c10_3_supersonic_flat_plate_functions_v3;
