@@ -224,7 +224,7 @@ end
 disp('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
 t = toc;
 min = fix(t/60); s = rem(t,60);
-fprintf('Time: %d min ,%.2f s\n', min, s)
+fprintf('Time: %d min, %.2f s\n', min, s)
 %min = fix(sim_time/60); s = rem(sim_time,60);
 %fprintf('Simulation time: %d min ,%f s\n', min, s)
 
