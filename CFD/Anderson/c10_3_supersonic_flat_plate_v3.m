@@ -43,8 +43,8 @@ tol = 1e-5; % Tolerance value to check convergence
 VIS = 1; % Turn viscosity on and off (probably doesn't work)
 
 % Mesh data
-NX = 70;
-NY = 70;
+NX = 20;
+NY = 20;
 delta_x = L/(NX-1);
 delta_y = H/(NY-1);
 
@@ -147,15 +147,16 @@ for loop = 1:iter
             U2_bar(j,i) = U2(j,i) - delta_t/delta_x*(E2(j,i+1)-E2(j,i)) - delta_t/delta_y*(F2(j+1,i)-F2(j,i));
             U3_bar(j,i) = U3(j,i) - delta_t/delta_x*(E3(j,i+1)-E3(j,i)) - delta_t/delta_y*(F3(j+1,i)-F3(j,i));
             U4_bar(j,i) = U4(j,i) - delta_t/delta_x*(E4(j,i+1)-E4(j,i)) - delta_t/delta_y*(F4(j+1,i)-F4(j,i));
-
-            % First step of residual calculations
-            temp = [-1/delta_x*(E1(j,i+1)-E1(j,i)) - 1/delta_y*(F1(j+1,i)-F1(j,i));
-                    -1/delta_x*(E2(j,i+1)-E2(j,i)) - 1/delta_y*(F2(j+1,i)-F2(j,i));
-                    -1/delta_x*(E3(j,i+1)-E3(j,i)) - 1/delta_y*(F3(j+1,i)-F3(j,i));
-                    -1/delta_x*(E4(j,i+1)-E4(j,i)) - 1/delta_y*(F4(j+1,i)-F4(j,i))];
-            res_his(:,loop) = temp;
         end
     end
+
+    % First step of residual calculations
+    i = res_x; j = res_y;
+    temp = [-1/delta_x*(E1(j,i+1)-E1(j,i)) - 1/delta_y*(F1(j+1,i)-F1(j,i));
+            -1/delta_x*(E2(j,i+1)-E2(j,i)) - 1/delta_y*(F2(j+1,i)-F2(j,i));
+            -1/delta_x*(E3(j,i+1)-E3(j,i)) - 1/delta_y*(F3(j+1,i)-F3(j,i));
+            -1/delta_x*(E4(j,i+1)-E4(j,i)) - 1/delta_y*(F4(j+1,i)-F4(j,i))];
+    res_his(:,loop) = temp;
 
     % Obtain estimated air properties
     [u_bar(2:end-1,2:end-1),v_bar(2:end-1,2:end-1),rho_bar(2:end-1,2:end-1),p_bar(2:end-1,2:end-1),T_bar(2:end-1,2:end-1),e_bar(2:end-1,2:end-1)] = air_from_U(U1_bar(2:end-1,2:end-1),U2_bar(2:end-1,2:end-1),U3_bar(2:end-1,2:end-1),U4_bar(2:end-1,2:end-1),cv,R);
@@ -184,15 +185,16 @@ for loop = 1:iter
             U2(j,i) = (U2(j,i) + U2_bar(j,i) - delta_t/delta_x*(E2_bar(j,i)-E2_bar(j,i-1)) - delta_t/delta_y*(F2_bar(j,i)-F2_bar(j-1,i)))/2;
             U3(j,i) = (U3(j,i) + U3_bar(j,i) - delta_t/delta_x*(E3_bar(j,i)-E3_bar(j,i-1)) - delta_t/delta_y*(F3_bar(j,i)-F3_bar(j-1,i)))/2;
             U4(j,i) = (U4(j,i) + U4_bar(j,i) - delta_t/delta_x*(E4_bar(j,i)-E4_bar(j,i-1)) - delta_t/delta_y*(F4_bar(j,i)-F4_bar(j-1,i)))/2;
-
-             % Second step of residuals calculations
-            temp = [-delta_x*(E1_bar(j,i)-E1_bar(j,i-1)) - delta_y*(F1_bar(j,i)-F1_bar(j-1,i));
-                    -delta_x*(E2_bar(j,i)-E2_bar(j,i-1)) - delta_y*(F1_bar(j,i)-F1_bar(j-1,i));
-                    -delta_x*(E3_bar(j,i)-E3_bar(j,i-1)) - delta_y*(F1_bar(j,i)-F1_bar(j-1,i));
-                    -delta_x*(E4_bar(j,i)-E4_bar(j,i-1)) - delta_y*(F1_bar(j,i)-F1_bar(j-1,i))];
-            res_his(:,loop) = (res_his(:,loop) + temp)/2;
         end
     end
+
+    % Second step of residuals calculations
+    i = res_x; j = res_y;
+    temp = [-1/delta_x*(E1_bar(j,i)-E1_bar(j,i-1)) - 1/delta_y*(F1_bar(j,i)-F1_bar(j-1,i));
+            -1/delta_x*(E2_bar(j,i)-E2_bar(j,i-1)) - 1/delta_y*(F1_bar(j,i)-F1_bar(j-1,i));
+            -1/delta_x*(E3_bar(j,i)-E3_bar(j,i-1)) - 1/delta_y*(F1_bar(j,i)-F1_bar(j-1,i));
+            -1/delta_x*(E4_bar(j,i)-E4_bar(j,i-1)) - 1/delta_y*(F1_bar(j,i)-F1_bar(j-1,i))];
+    res_his(:,loop) = (res_his(:,loop) + temp)/2;
 
     % Calculate air properties at the interior
     [u_mat(2:end-1,2:end-1),v_mat(2:end-1,2:end-1),rho_mat(2:end-1,2:end-1),p_mat(2:end-1,2:end-1),T_mat(2:end-1,2:end-1),e_mat(2:end-1,2:end-1)] = air_from_U(U1(2:end-1,2:end-1),U2(2:end-1,2:end-1),U3(2:end-1,2:end-1),U4(2:end-1,2:end-1),cv,R);
