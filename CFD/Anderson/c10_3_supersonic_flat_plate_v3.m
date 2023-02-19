@@ -13,7 +13,7 @@ tic
 
 % Thermodynamics data
 M_air = 0.028964; % [kg/mol]
-R = 8.314462/M_air; % J/(mol*k)
+R = 8.314462/M_air; % [J/(kg*k)]
 gamma = 1.4;
 Pr = 0.71; % Prandtl number
 cv = R/(gamma-1);
