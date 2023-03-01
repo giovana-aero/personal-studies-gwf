@@ -41,6 +41,8 @@ sol_an = sol;
 x = linspace(0,L,Im+1);
 t = 0;
 
+errors = zeros(iter+1,Im+1);
+
 for loop = 2:iter+1 % Queremos os dados a partir da segunda linha da matriz sol
     % Solução numérica
     % Montar matriz A
@@ -69,6 +71,8 @@ for loop = 2:iter+1 % Queremos os dados a partir da segunda linha da matriz sol
     % (importante pra solução analítica)
     t = t + delta_t;
     
+    errors(loop,:) = (sol(loop,2:end-1)-sol_an(loop,2:end-1))./sol(loop,2:end-1);
+    
     figure(1),clf
     plot([1:(Im+1)],sol(loop,:),'r','linewidth',2),grid on,hold on
     scatter([1:(Im+1)],sol(loop,:),'r')
@@ -81,3 +85,4 @@ end
 
 disp(sol(end,:))
 disp(sol_an(end,:))
+disp(errors)
