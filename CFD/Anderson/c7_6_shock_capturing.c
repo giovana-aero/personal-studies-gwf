@@ -310,7 +310,7 @@ int main()
 	if(print==1)
 	{
 		/* Print results to text files */
-		/* File 1: air proerties along the nozzle */
+		/* File 1: air properties along the nozzle */
 		/* Columns: x,rho,T,V,a,p,mach,A */
 		FILE *f1 = fopen("c7_6_shock_capturing1.res","w");
 		if (f1 == NULL)
