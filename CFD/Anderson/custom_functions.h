@@ -8,46 +8,41 @@
 /*sizeof(A)/sizeof(A[0]) número de linhas */
 /*sizeof(A[0])/sizeof(A[0][0]) número de colunas */
 
-void print_array(int n,double *vec)
-{
-	for(int i=0;i<n;i++)
-	{
-		printf("%.2f ",vec[i]);
-	}
-	putchar('\n');
-}
-
-// void print_mat(int nx, int ny, const double *mat) ????????
+// void print_array(int n,double *vec)
 // {
-	// /* nx -> number of columns */
-	// /* ny -> number of rows */
-	// for(int j=0;j<ny;j++)
+	// for(int i=0;i<n;i++)
 	// {
-		// for(int i=0;i<nx;i++)
-		// {
-			// printf("%f ",mat[j*ny+i]);
-			// printf("%f, %d %d,",mat[j][i],j,i);
-		// }
-		// putchar('\n');
-	// }	
-	
-	
+		// printf("%.2f ",vec[i]);
+	// }
+	// putchar('\n');
 // }
 
-void print_mat(size_t width, size_t height, const double *A)
+void print_mat(int ny,int nx,double mat[ny][nx])
 {
-	for(size_t i = 0; i < height; ++i)
+	for(int j=0;j<ny;j++)
 	{
-		for(size_t j = 0; j < width; ++j)
+		for(int i=0;i<nx;i++)
 		{
-			// printf("A[%zu][%zu] = %d\n", i, j, A[i * width + j]);
-			printf("%f ",A[i*width + j]);
+			printf("%f ",mat[j][i]);
 		}
 		putchar('\n');
-		
 	}
-  // https://stackoverflow.com/questions/8715034/print-2d-array-by-calling-a-function-print-array-with-argument-the-2d-array
 }
+
+// https://stackoverflow.com/questions/8715034/print-2d-array-by-calling-a-function-print-array-with-argument-the-2d-array
+// void print_mat(size_t width, size_t height, const double *A)
+// {
+	// for(size_t i = 0; i < height; ++i)
+	// {
+		// for(size_t j = 0; j < width; ++j)
+		// {
+			// printf("A[%zu][%zu] = %d\n", i, j, A[i * width + j]);
+			// printf("%f ",A[i*width + j]);
+		// }
+		// putchar('\n');
+		
+	// }
+// }
 
 void ones(int nx, int ny, double mat[nx][ny])
 {
