@@ -25,19 +25,12 @@ int main(){
   double R = 0.287e3;
   double cp = gamma*R/(gamma-1.);
 
-  // Initial conditions - airflow (gigi - mach 2, altitude 18 km)
+  // Initial conditions - airflow
   double Minf = 2.;
   double Tinf = 216.66;
   double pinf = 7.5652e3;
   double rhoinf = 1.2164e-1;
   double params[] = {gamma,R,cp,Minf};
-
-  // Initial conditions - airflow (ludimila - mach 3, altitude 22 km)
-  // double Minf = 3.;
-  // double Tinf = 216.66;
-  // double pinf = 4.0420e3;
-  // double rhoinf = 6.4995e-2;
-  // double params[] = {gamma,R,cp,Minf};
 
   // Angles [degrees]
   double beta[] = {deg2rad(20.),deg2rad(50.)};
