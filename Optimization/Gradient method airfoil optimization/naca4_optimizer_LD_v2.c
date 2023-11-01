@@ -258,20 +258,20 @@ void naca4(double *airfoil_data,int numPoints){
           xLower[i] = xVec[i] + yVecThickness[i]*sin(theta[i]);
           yLower[i] = yVecCurvature[i] - yVecThickness[i]*cos(theta[i]);
       }
-
-      /* Imprimir arquivo de coordenadas */
-      FILE *fp;
-      fp = fopen("coordinates.dat","w");
-
-      /* Imprimir extradorso */
-      for(int i=numPoints-1;i>=0;i--){
-          fprintf(fp,"%f %f\n",xUpper[i],yUpper[i]);
-      }
-      /* Imprimir intradorso */
-      for(int i=1;i<numPoints;i++){
-          fprintf(fp,"%f %f\n",xLower[i],yLower[i]);
-      }
-
-      fclose(fp);
   }
+  
+  /* Imprimir arquivo de coordenadas */
+  FILE *fp;
+  fp = fopen("coordinates.dat","w");
+
+  /* Imprimir extradorso */
+  for(int i=numPoints-1;i>=0;i--){
+      fprintf(fp,"%f %f\n",xUpper[i],yUpper[i]);
+  }
+  /* Imprimir intradorso */
+  for(int i=1;i<numPoints;i++){
+      fprintf(fp,"%f %f\n",xLower[i],yLower[i]);
+  }
+
+  fclose(fp);
 }
