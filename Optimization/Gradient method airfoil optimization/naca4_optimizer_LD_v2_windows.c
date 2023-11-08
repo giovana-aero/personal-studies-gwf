@@ -15,25 +15,28 @@ void naca4(double *airfoil_data,int numPoints);
 int main(){
 
   // Airfoil data
- double airfoil_data[] = {2.,4.,12.};
+ double airfoil_data[] = {1.,1.,5.};
   // double airfoil_data[] = {10.630163,5.714319,4.130613};
   int numPoints = 100; // Total
-  naca4(airfoil_data,numPoints); system("mv coordinates.dat original_coordinates.dat");
+  naca4(airfoil_data,numPoints); 
+	if(access("original_coordinates.dat",F_OK)==0)
+		system("del original_coordinates.dat");
+	system("ren coordinates.dat original_coordinates.dat");
 
   // Simulation parameters
-  double iter = 50;
-  double Re = 1e6;
-  double alpha = 5.;
+  double iter = 200;
+  double Re = 5e5;
+  double alpha = 0.;
   double params[] = {iter,Re,alpha};
 
   // Aerodynamic data
   double LD;
 
   // Algorithm parameters
-  int opt_iter = 20;
+  int opt_iter = 1000;
   double eps = 1e-5;
   double delta_m = 1e-1, delta_p = 1e-1, delta_t = 1e-1;
-  double step = 5e-3;
+  double step = 1e-3;
   double grad[3];
   double history[opt_iter];
   double grad_history[opt_iter][3];
@@ -146,16 +149,17 @@ void run_xfoil(double *LD,double Re,double alpha,int iter){
   input = fopen("xfoil_input.txt","w");
 
   if(access("polar1.txt", F_OK) == 0){
-    system("rm polar1.txt");
+    system("del polar1.txt");
   }
-
+	
+	fprintf(input,"PLOP\nG\n\n");
   fprintf(input,"LOAD coordinates.dat\n\nOPER\n");
   fprintf(input,"VISC %f\n",Re);
   fprintf(input,"PACC\npolar1.txt\n\n");
   fprintf(input,"ITER %d\nALFA %f\n\nQUIT\n",iter,alpha);
   fclose(input);
 
-  system("xfoil < xfoil_input.txt");
+  system("xfoil.exe < xfoil_input.txt");
 
   polar = fopen("polar1.txt","r");
   while((ch = fgetc(polar)) != EOF){

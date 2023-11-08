@@ -129,7 +129,6 @@ void run_xfoil(double *LD,double Re,double alpha,int iter){
   fclose(input);
 
   system("xfoil < xfoil_input.txt");
-  putchar('\n');
 
   polar = fopen("polar1.txt","r");
   while((ch = fgetc(polar)) != EOF){
@@ -157,7 +156,8 @@ void cosspace(double *vec,double length,int numPoints){
     double midPoint = length/2.;
     double angleInc = pi/(((double) numPoints) - 1.);
     double curAngle = angleInc;
-
+		
+		vec[0] = 0;
     for(int i=1;i<numPoints;i++){
         vec[i] = midPoint*(1.-cos(curAngle));
         curAngle += angleInc;
@@ -168,7 +168,7 @@ void naca4(double *airfoil_data,int numPoints){
   double m = airfoil_data[0]/100.;
   double p = airfoil_data[1]/10.;
   double t = airfoil_data[2]/100.;
-  printf("%f %f %f\n",m,p,t);
+  // printf("%f %f %f\n",m,p,t);
 
 
   double xVec[numPoints];
