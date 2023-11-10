@@ -103,7 +103,7 @@ int main(){
 
 void opt_func(double *CD,double *airfoil_data,double *params,int numPoints){
 
-  double iter = (int) params[0];
+  int iter = (int) params[0];
   double Re = params[1];
   double alpha = params[2];
 

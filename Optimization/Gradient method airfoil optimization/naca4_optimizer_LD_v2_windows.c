@@ -15,7 +15,7 @@ void naca4(double *airfoil_data,int numPoints);
 int main(){
 
   // Airfoil data
- double airfoil_data[] = {1.,1.,5.};
+  double airfoil_data[] = {1.,1.,2.};
   // double airfoil_data[] = {10.630163,5.714319,4.130613};
   int numPoints = 100; // Total
   naca4(airfoil_data,numPoints); 
@@ -33,7 +33,7 @@ int main(){
   double LD;
 
   // Algorithm parameters
-  int opt_iter = 1000;
+  int opt_iter = 200;
   double eps = 1e-5;
   double delta_m = 1e-1, delta_p = 1e-1, delta_t = 1e-1;
   double step = 1e-3;
@@ -96,7 +96,7 @@ int main(){
 
 void opt_func(double *LD,double *airfoil_data,double *params,int numPoints){
 
-  double iter = (int) params[0];
+  int iter = (int) params[0];
   double Re = params[1];
   double alpha = params[2];
 
