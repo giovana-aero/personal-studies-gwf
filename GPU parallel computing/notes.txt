@@ -1,0 +1,40 @@
+https://docs.nvidia.com/cuda/cuda-installation-guide-microsoft-windows/index.html
+https://developer.nvidia.com/blog/even-easier-introduction-cuda/
+https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html
+https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html
+https://developer.nvidia.com/blog/unified-memory-cuda-beginners/
+https://en.wikipedia.org/wiki/Thread_block_(CUDA_programming)
+https://leimao.github.io/blog/Proper-CUDA-Error-Checking/
+https://stackoverflow.com/questions/27277365/unspecified-launch-failure-on-memcpy/27278218#27278218%5B/url%5D
+https://stackoverflow.com/questions/21986542/is-cudamallocmanaged-slower-than-cudamalloc
+https://docs.nvidia.com/cuda/cuda-runtime-api/group__CUDART__MEMORY.html
+https://www.quora.com/Is-parallel-computing-good-for-computational-fluid-dynamics
+
+sobre os comandos de validação
+-o script do deviceQuery foi retirado do respectivo arquivo de solução do visual studio
+-o script do bandwidthTest foi retirado de sua respectiva pasta (vinda do github, assim como o devicequery)
+-os arquivos .h relevantes foram obtidos do mesmo github, da pasta common
+
+compilação e execução
+-usar "compute-sanitizer [nome do executável]" pra detectar erros de memória
+-pode ser necessário especificar a arquitetura da GPU. vide https://docs.nvidia.com/cuda/cuda-compiler-driver-nvcc/index.html#options-for-steering-gpu-code-generation
+ >no meu caso, usar sempre a opção:
+  --gpu-architecture=sm_50
+-no caso do erro ptxas fatal: Unresolved extern function '__cudaCDP2GetLastError', usar a opção
+ -rdc true
+ >na primeira vez que encontrei isso, creio que foi causado pelo uso de printf("%s\n",cudaGetErrorString(cudaGetLastError()));
+  dentro de um kernel
+-se o arquivo cl.exe não for encontrado, inserir no PATH o endereço:
+ C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.37.32822\bin\Hostx64\x64
+
+código
+-número de threads deve ser múltiplo de 32
+-nvcc não permite a declaração de vetores com a sintaxe: [formato] vetor [variável int]; https://stackoverflow.com/questions/13480213/how-to-dynamically-allocate-arrays-inside-a-kernel https://stackoverflow.com/questions/2187189/creating-arrays-in-nvidia-cuda-kernel
+-evitar alocação excessiva de memória na gpu (isto é, dentro de um kernel)
+-relevante pra encontrar erros: printf("%s\n",cudaGetErrorString(cudaGetLastError()));
+-também importante para encontrar erros: compute-sanitizer [executável]
+-erro an illegal memory access was encountered array kernel:
+ >variáveis foram devidamente inseridas na memória? (cudaMallocManaged ou cudaMemcpy, por exemplo)
+ >os índices de arrays comportam-se como devido, sem sair do limite do array?
+-o propósito principal da GPU é fazer conta. uma série de funções não fica disponível na GPU: fprintf, fopen, fclose,
+ strcat, puts, system, entre outras
