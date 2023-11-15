@@ -15,7 +15,7 @@ void physical_boundary_conditions(int Nxs,int Nys,double *sol,double T_left,
 																	double T_right,double T_up,double T_down);
 void phantom_boundary_conditions(int Nxs,int Nys,double *sol);
 void save_sol_old(int Nxs,int Nys,double *sol,double *sol_old,int k);
-double check_convergence(int Nxs,int Nys,double *sol,double *sol_old);
+double get_residuals(int Nxs,int Nys,double *sol,double *sol_old);
 void parallel_solver(int Nxs,int Nys,double *sol,double *sol_old,int iter,
 										 double beta,double eps,double deltaX,double deltaY);
 
@@ -171,17 +171,17 @@ void phantom_boundary_conditions(int Nxs,int Nys,double *sol){
 void save_sol_old(int Nxs,int Nys,double *sol,double *sol_old,int k){
 	for(int j=1;j<Nys-1;j++){
 		for(int i=1;i<Nxs-1;i++)
-			sol_old[k*(Nxs-2)*(Nys-2)+(Nys-2)*j+i] = sol[k*Nxs*Nys+Nys*j+i];
+			sol_old[k*(Nxs-2)*(Nys-2)+(Nys-2)*(j-1)+(i-1)] = sol[k*Nxs*Nys+Nys*j+i];
 	}
 }
 
-double check_convergence(int Nxs,int Nys,double *sol,double *sol_old){
+double get_residuals(int Nxs,int Nys,double *sol,double *sol_old){
 	double res_sum = 0;
 	for(int k=0;k<4;k++){
 		for(int j=1;j<Nys-1;j++){
 			for(int i=1;i<Nxs-1;i++)
 				res_sum += fabs(sol[k*Nxs*Nys+Nys*j+i] - 
-									 sol_old[k*(Nxs-2)*(Nys-2)+(Nys-2)*j+i]);
+									 sol_old[k*(Nxs-2)*(Nys-2)+(Nys-2)*(j-1)+(i-1)]);
 		}
 	}
 	
@@ -202,7 +202,7 @@ void parallel_solver(int Nxs,int Nys,double *sol,double *sol_old,int iter,
 		}
 		
 		// Check convergence
-		if((res_val=check_convergence(Nxs,Nys,sol,sol_old)) <= eps){
+		if((res_val=get_residuals(Nxs,Nys,sol,sol_old)) <= eps){
 			puts("Convergence!");
 			break;
 		}
