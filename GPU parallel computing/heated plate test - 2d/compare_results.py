@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-data1 = np.genfromtxt("results_original.txt",delimiter = " ")
+data1 = np.genfromtxt("results_normal.txt",delimiter = " ")
 data2 = np.genfromtxt("results.txt",delimiter = " ")
 
 compare = []

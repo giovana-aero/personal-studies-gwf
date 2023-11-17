@@ -17,16 +17,16 @@ void phantom_boundary_conditions(int Nxs,int Nys,double *sol);
 void save_sol_old(int Nxs,int Nys,double *sol,double *sol_old,int k);
 double get_residuals(int Nxs,int Nys,double *sol,double *sol_old);
 void parallel_solver(int Nxs,int Nys,double *sol,double *sol_old,int iter,
-										 double beta,double eps,double deltaX,double deltaY);
+										 double beta,double eps);
 
 int main(){
 	// Problem parameters
   double Lx = 1., Ly = 1.;
-  double T_down =-40., T_up = -40.;
-  double T_left = 40., T_right = 40.;
+  double T_down = 10., T_up = 20.;
+  double T_left = 30., T_right = 40.;
 
   // Mesh parameters
-  int Nx = 500, Ny = 500; // Complete domain (even values)
+  int Nx = 10, Ny = 10; // Complete domain (even values)
   double deltaX = Lx/((double) Nx);
   double deltaY = Ly/((double) Ny);
   double beta = deltaX/deltaY;
@@ -51,7 +51,13 @@ int main(){
 	physical_boundary_conditions(Nxs,Nys,sol,T_left,T_right,T_up,T_down);
 
   // Obtain solution
-  parallel_solver(Nxs,Nys,sol,sol_old,iter,beta,eps,deltaX,deltaY);
+  parallel_solver(Nxs,Nys,sol,sol_old,iter,beta,eps);
+	
+	for(int k=0;k<4;k++){
+		printf("%d",k);
+		print_2d_array(Nxs,Nys,k,sol);
+		putchar('\n');
+	}
 
   // Print results to file
   FILE *results;
@@ -86,17 +92,8 @@ int main(){
   return 0;
 }
 
-void print_2d_array(int Nx,int Ny,int k,double *M){
-  for(int j=Ny-1;j>=0;j--){
-    for(int i=0;i<Nx;i++)
-      printf("%f ",M[k*Nx*Ny+Ny*j+i]);
-
-    putchar('\n');
-  }
-}
-
 // void print_2d_array(int Nx,int Ny,int k,double *M){
-  // for(int j=0;j<Ny;j++){
+  // for(int j=Ny-1;j>=0;j--){
     // for(int i=0;i<Nx;i++)
       // printf("%f ",M[k*Nx*Ny+Ny*j+i]);
 
@@ -104,13 +101,21 @@ void print_2d_array(int Nx,int Ny,int k,double *M){
   // }
 // }
 
+void print_2d_array(int Nx,int Ny,int k,double *M){
+  for(int j=0;j<Ny;j++){
+    for(int i=0;i<Nx;i++)
+      printf("%f ",M[k*Nx*Ny+Ny*j+i]);
+
+    putchar('\n');
+  }
+}
+
 void initialize(int size,double *M){
   for(int i=0;i<size;i++)
       M[i] = 0;
 }
 
-void solver(int Nx,int Ny,double *sol,int k,double beta,double deltaX,
-						double deltaY){
+void solver(int Nx,int Ny,double *sol,int k,double beta){
 	for(int j=1;j<Ny-1;j++){
 		for(int i=1;i<Nx-1;i++){
 			// [k*Nx*Ny+Ny*j+i]
@@ -189,14 +194,14 @@ double get_residuals(int Nxs,int Nys,double *sol,double *sol_old){
 }
 
 void parallel_solver(int Nxs,int Nys,double *sol,double *sol_old,int iter,
-										 double beta,double eps,double deltaX,double deltaY){
+										 double beta,double eps){
 	double res_val;
 	
 	for(int loop=0;loop<iter;loop++){
 		// Calculate one iteration for each region
 		for(int k=0;k<4;k++){
 			save_sol_old(Nxs,Nys,sol,sol_old,k); // Save current values for convergence checking
-			solver(Nxs,Nys,sol,k,beta,deltaX,deltaY);
+			solver(Nxs,Nys,sol,k,beta);
 			// print_2d_array(Nxs,Nys,k,sol);
 			// getchar();
 		}

@@ -1,210 +1,28 @@
 #include<stdio.h>
 #include<iostream>
 
-/*
-a alterar:
--solucionador não está sendo eficiente-creio que o mesmo processo é repetido em
- múltiplas threads, o que não é necessário
--resolver a questão dos resíduos
-*/
-
-
-void print_2d_array(int Nx,int Ny,int k,double *M){
-  for(int j=Ny-1;j>=0;j--){
-    for(int i=0;i<Nx;i++)
-      printf("%f ",M[k*Nx*Ny+Ny*j+i]);
-
-    putchar('\n');
-  }
-}
-
-__device__
-void dev_print_2d_array(int Nx,int Ny,int k,double *M){
-  for(int j=Ny-1;j>=0;j--){
-    for(int i=0;i<Nx;i++)
-      printf("%f ",M[k*Nx*Ny+Ny*j+i]);
-
-    printf("\n");
-  }
-}
-
-// void print_2d_array(int Nx,int Ny,int k,double *M){
-  // for(int j=0;j<Ny;j++){
-    // for(int i=0;i<Nx;i++)
-      // printf("%f ",M[k*Nx*Ny+Ny*j+i]);
-
-    // putchar('\n');
-  // }
-// }
-
+void print_2d_array(int Nx,int Ny,int k,double *M);
 __global__
-void initialize(int size,double *M){
-	int index = blockIdx.x*blockDim.x + threadIdx.x;
-  int stride = blockDim.x*gridDim.x;
-  for(int i=index;i<size;i+=stride){
-    M[i] = 0;
-		// printf("%f ",M[i]);
-	}
-}
-
+void initialize(int size,double *M);
 __device__
-void solver(int Nx,int Ny,double *sol,int k,double beta){
-	for(int j=1;j<Ny-1;j++){
-		for(int i=1;i<Nx-1;i++){
-			sol[k*Nx*Ny+Ny*j+i] = 1./(2.*(1.+beta*beta))*(sol[k*Nx*Ny+Ny*j+(i+1)] + 
-														sol[k*Nx*Ny+Ny*j+(i-1)] + 
-														beta*beta*sol[k*Nx*Ny+Ny*(j+1)+i] + 
-														beta*beta*sol[k*Nx*Ny+Ny*(j-1)+i]);
-		}
-	}
-}
-
-// Regions are considered as below:
-// | [0] [1] |
-// | [2] [3] | 
+void solver(int Nx,int Ny,double *sol,int k,double beta);
 __global__
 void physical_boundary_conditions(int Nxs,int Nys,double *sol,double T_left,
-																	double T_right,double T_up,double T_down){
-	
-	int index = blockIdx.x*blockDim.x + threadIdx.x;
-  int stride = blockDim.x*gridDim.x;
-	for(int j=index;j<Nys-1;j+=stride){
-		sol[0*Nxs*Nys+Nys*j+0] = T_left;
-		sol[2*Nxs*Nys+Nys*j+0] = T_left;
-		sol[1*Nxs*Nys+Nys*j+(Nxs-1)] = T_right;
-		sol[3*Nxs*Nys+Nys*j+(Nxs-1)] = T_right;
-  }
-  for(int i=index;i<Nxs-1;i+=stride){
-		sol[2*Nxs*Nys+Nys*0+i] = T_down;
-		sol[3*Nxs*Nys+Nys*0+i] = T_down;
-		sol[0*Nxs*Nys+Nys*(Nys-1)+i] = T_up;
-		sol[1*Nxs*Nys+Nys*(Nys-1)+i] = T_up;
-  }
-}
-
+																	double T_right,double T_up,double T_down);
 __global__
-void phantom_boundary_conditions(int Nxs,int Nys,double *sol){
-	int index = blockIdx.x*blockDim.x + threadIdx.x;
-  int stride = blockDim.x*gridDim.x;
-	// Vertical
-	for(int j=index;j>0&&j<Nys;j+=stride){
-		// Left to right
-		sol[3*Nxs*Nys+Nys*j+0] = sol[2*Nxs*Nys+Nys*j+(Nxs-2)];
-		sol[1*Nxs*Nys+Nys*(j-1)+0] = sol[0*Nxs*Nys+Nys*(j-1)+(Nxs-2)];
-		
-		// Right to left
-		sol[2*Nxs*Nys+Nys*j+(Nxs-1)] = sol[3*Nxs*Nys+Nys*j+1];
-		sol[0*Nxs*Nys+Nys*(j-1)+(Nxs-1)] = sol[1*Nxs*Nys+Nys*(j-1)+1];
-	}
-	
-	// Horizontal
-	for(int i=index;i>0&&i<Nxs;i+=stride){
-		// Lower to upper
-		sol[0*Nxs*Nys+Nys*0+i] = sol[2*Nxs*Nys+Nys*(Nys-2)+i];
-		sol[1*Nxs*Nys+Nys*0+(i-1)] = sol[3*Nxs*Nys+Nys*(Nys-2)+(i-1)];
-		
-		// Upper to lower
-		sol[2*Nxs*Nys+Nys*(Nys-1)+i] = sol[0*Nxs*Nys+Nys*1+i];
-		sol[3*Nxs*Nys+Nys*(Nys-1)+(i-1)] = sol[1*Nxs*Nys+Nys*1+(i-1)];	
-	}
-}
-
+void phantom_boundary_conditions(int Nxs,int Nys,double *sol);
 __device__
-void save_sol_old_loop2(int Nxs,int Nys,double *sol,double *sol_old,int k,
-												int j){
-	int index = blockIdx.x*blockDim.x + threadIdx.x;
-  int stride = blockDim.x*gridDim.x;
-	for(int i=index;i>0&&i<Nxs-1;i+=stride)
-		sol_old[k*(Nxs-2)*(Nys-2)+(Nys-2)*(j-1)+(i-1)] = sol[k*Nxs*Nys+Nys*j+i];
-}
-
+void save_sol_old(int Nxs,int Nys,double *sol,double *sol_old);
 __device__
-void save_sol_old(int Nxs,int Nys,double *sol,double *sol_old,int k){
-	int index = blockIdx.x*blockDim.x + threadIdx.x;
-  int stride = blockDim.x*gridDim.x;
-	for(int j=index;j>0&&j<Nys-1;j+=stride)
-		save_sol_old_loop2(Nxs,Nys,sol,sol_old,k,j);
-}
-
-__device__
-void get_residuals_loop2(int Nxs,int Nys,double *sol,double *sol_old,double *res,
-									 int k,int j){
-	int index = blockIdx.x*blockDim.x + threadIdx.x;
-  int stride = blockDim.x*gridDim.x;
-	for(int i=index;i>0&&i<Nxs-1;i+=stride)
-		res[k*(Nxs-2)*(Nys-2)+(Nys-2)*(j-1)+(i-1)] = fabs(sol[k*Nxs*Nys+Nys*j+i] - 
-							 sol_old[k*(Nxs-2)*(Nys-2)+(Nys-2)*(j-1)+(i-1)]);
-}
-
-__device__
-void get_residuals(int Nxs,int Nys,double *sol,double *sol_old,double *res,
-									 int k){
-	int index = blockIdx.x*blockDim.x + threadIdx.x;
-  int stride = blockDim.x*gridDim.x;
-	for(int j=index;j>0&&j<Nys-1;j+=stride)
-		get_residuals_loop2(Nxs,Nys,sol,sol_old,res,k,j);
-}
-
-double sum_residuals(int Nxs,int Nys,double *res){
-	double res_sum = 0.;
-	for(int i=0;i<Nxs*Nys*4;i++)
-		res_sum += res[i];
-	
-	return res_sum;
-}
-
+void get_residuals(int Nxs,int Nys,double *sol,double *sol_old,double *res);
+double sum_residuals(int Nxs,int Nys,double *res);
 __global__ 
 void iterate_once(int Nxs,int Nys,double *sol,double *sol_old,double *res,
-									double beta){
-	int index = blockIdx.x*blockDim.x + threadIdx.x;
-  int stride = blockDim.x*gridDim.x;
-	// printf("iterate_once: %d %d\n",index,stride);
-	for(int k=index;k<4;k+=stride){
-		save_sol_old(Nxs,Nys,sol,sol_old,k); // Save current values for convergence checking
-		// dev_print_2d_array(Nxs-2,Nys-2,k,sol_old);
-		solver(Nxs,Nys,sol,k,beta);
-		get_residuals(Nxs,Nys,sol,sol_old,res,k);
-	}
-}
-
-// __global__
+									double beta);
 void parallel_solver(int Nxs,int Nys,double *sol,double *sol_old,double *res,
 										 int iter,double beta,double eps,int blocksPerGrid,
-										 int threadsPerBlock){
-	double res_val;
-	for(int loop=0;loop<iter;loop++){
-		// Calculate one iteration for each region
-		iterate_once<<<blocksPerGrid,threadsPerBlock>>>(Nxs,Nys,sol,sol_old,res,beta);
-		cudaDeviceSynchronize();
-		
-		for(int k=0;k<4;k++){
-			printf("%d\n",k);
-			print_2d_array(Nxs,Nys,k,sol);
-			putchar('\n');
-			print_2d_array(Nxs-2,Nys-2,k,sol_old);
-			putchar('\n');
-			print_2d_array(Nxs-2,Nys-2,k,res);
-			putchar('\n');
-		}
-		getchar();
-		
-		// Check convergence
-		res_val = sum_residuals(Nxs-2,Nys-2,res);
-		if(res_val <= eps){
-			puts("Convergence!");
-			break;
-		}
-		
-		printf("Iteration %d | Residuals = %f\n",loop+1,res_val);
-		
-		// Update phantom boundary conditions
-		phantom_boundary_conditions<<<blocksPerGrid,threadsPerBlock>>>(Nxs,Nys,sol);
-		cudaDeviceSynchronize();
-	}
-	
-	// cudaFree(res_val);
-}
-
+										 int threadsPerBlock);
+										 
 int main(){
 	time_t start,end;
 	time(&start);
@@ -215,7 +33,7 @@ int main(){
   double T_left = 50., T_right = 50.;
 
   // Mesh parameters
-  int Nx = 10, Ny = 10; // Complete domain (even values)
+  int Nx = 100, Ny = 100; // Complete domain (even values)
   double deltaX = Lx/((double) Nx);
   double deltaY = Ly/((double) Ny);
   double beta = deltaX/deltaY;
@@ -296,4 +114,192 @@ int main(){
 	puts("end");
 
   return 0;
+}
+
+void print_2d_array(int Nx,int Ny,int k,double *M){
+  for(int j=Ny-1;j>=0;j--){
+    for(int i=0;i<Nx;i++)
+      printf("%f ",M[k*Nx*Ny+Ny*j+i]);
+
+    putchar('\n');
+  }
+}
+
+// __device__
+// void dev_print_2d_array(int Nx,int Ny,int k,double *M){
+  // for(int j=Ny-1;j>=0;j--){
+    // for(int i=0;i<Nx;i++)
+      // printf("%f ",M[k*Nx*Ny+Ny*j+i]);
+
+    // printf("\n");
+  // }
+// }
+
+// void print_2d_array(int Nx,int Ny,int k,double *M){
+  // for(int j=0;j<Ny;j++){
+    // for(int i=0;i<Nx;i++)
+      // printf("%f ",M[k*Nx*Ny+Ny*j+i]);
+
+    // putchar('\n');
+  // }
+// }
+
+__global__
+void initialize(int size,double *M){
+	int index = blockIdx.x*blockDim.x + threadIdx.x;
+  int stride = blockDim.x*gridDim.x;
+  for(int i=index;i<size;i+=stride){
+    M[i] = 0;
+	}
+}
+
+__device__
+void solver(int Nx,int Ny,double *sol,int k,double beta){
+	if(threadIdx.x == k){
+		for(int j=1;j<Ny-1;j++){
+			for(int i=1;i<Nx-1;i++){
+				sol[k*Nx*Ny+Ny*j+i] = 1./(2.*(1.+beta*beta))*(sol[k*Nx*Ny+Ny*j+(i+1)] + 
+															sol[k*Nx*Ny+Ny*j+(i-1)] + 
+															beta*beta*sol[k*Nx*Ny+Ny*(j+1)+i] + 
+															beta*beta*sol[k*Nx*Ny+Ny*(j-1)+i]);
+			}
+		}
+	}
+}
+
+// Regions are considered as below:
+// | [0] [1] |
+// | [2] [3] | 
+__global__
+void physical_boundary_conditions(int Nxs,int Nys,double *sol,double T_left,
+																	double T_right,double T_up,double T_down){
+	
+	int index = blockIdx.x*blockDim.x + threadIdx.x;
+  int stride = blockDim.x*gridDim.x;
+	for(int j=index;j<Nys-1;j+=stride){
+		sol[0*Nxs*Nys+Nys*j+0] = T_left;
+		sol[2*Nxs*Nys+Nys*j+0] = T_left;
+		sol[1*Nxs*Nys+Nys*j+(Nxs-1)] = T_right;
+		sol[3*Nxs*Nys+Nys*j+(Nxs-1)] = T_right;
+  }
+  for(int i=index;i<Nxs-1;i+=stride){
+		sol[2*Nxs*Nys+Nys*0+i] = T_down;
+		sol[3*Nxs*Nys+Nys*0+i] = T_down;
+		sol[0*Nxs*Nys+Nys*(Nys-1)+i] = T_up;
+		sol[1*Nxs*Nys+Nys*(Nys-1)+i] = T_up;
+  }
+}
+
+__global__
+void phantom_boundary_conditions(int Nxs,int Nys,double *sol){
+	int index = blockIdx.x*blockDim.x + threadIdx.x;
+  int stride = blockDim.x*gridDim.x;
+	// Vertical
+	for(int j=index;j>0&&j<Nys;j+=stride){
+		// Left to right
+		sol[3*Nxs*Nys+Nys*j+0] = sol[2*Nxs*Nys+Nys*j+(Nxs-2)];
+		sol[1*Nxs*Nys+Nys*(j-1)+0] = sol[0*Nxs*Nys+Nys*(j-1)+(Nxs-2)];
+		
+		// Right to left
+		sol[2*Nxs*Nys+Nys*j+(Nxs-1)] = sol[3*Nxs*Nys+Nys*j+1];
+		sol[0*Nxs*Nys+Nys*(j-1)+(Nxs-1)] = sol[1*Nxs*Nys+Nys*(j-1)+1];
+	}
+	
+	// Horizontal
+	for(int i=index;i>0&&i<Nxs;i+=stride){
+		// Lower to upper
+		sol[0*Nxs*Nys+Nys*0+i] = sol[2*Nxs*Nys+Nys*(Nys-2)+i];
+		sol[1*Nxs*Nys+Nys*0+(i-1)] = sol[3*Nxs*Nys+Nys*(Nys-2)+(i-1)];
+		
+		// Upper to lower
+		sol[2*Nxs*Nys+Nys*(Nys-1)+i] = sol[0*Nxs*Nys+Nys*1+i];
+		sol[3*Nxs*Nys+Nys*(Nys-1)+(i-1)] = sol[1*Nxs*Nys+Nys*1+(i-1)];	
+	}
+}
+
+__device__
+void save_sol_old(int Nxs,int Nys,double *sol,double *sol_old){
+	int index = blockIdx.x*blockDim.x + threadIdx.x;
+  int stride = blockDim.x*gridDim.x;
+	int k;
+	int row;
+	int col;
+	
+	for(int i=index;i<(Nxs-2)*(Nys-2)*4;i+=stride){
+		k = i/((Nxs-2)*(Nys-2));
+		row = (i - k*(Nxs-2)*(Nys-2))/(Nxs-2);
+		col = i - k*(Nxs-2)*(Nys-2) - (Nys-2)*row;
+		sol_old[i] = sol[k*Nxs*Nys+Nys*(row+1)+(col+1)];
+	}
+}
+
+__device__
+void get_residuals(int Nxs,int Nys,double *sol,double *sol_old,double *res){
+	int index = blockIdx.x*blockDim.x + threadIdx.x;
+  int stride = blockDim.x*gridDim.x;
+	int k;
+	int row;
+	int col;
+	for(int i=index;i<(Nxs-2)*(Nys-2);i+=stride){
+		k = i/((Nxs-2)*(Nys-2));
+		row = (i - k*(Nxs-2)*(Nys-2))/(Nxs-2);
+		col = i - k*(Nxs-2)*(Nys-2) - (Nys-2)*row;
+		res[i] = fabs(sol[k*Nxs*Nys+Nys*(row+1)+(col+1)] - 
+							 sol_old[i]);
+	}
+}
+
+double sum_residuals(int Nxs,int Nys,double *res){
+	double res_sum = 0.;
+	for(int i=0;i<Nxs*Nys*4;i++)
+		res_sum += res[i];
+	
+	return res_sum;
+}
+
+__global__ 
+void iterate_once(int Nxs,int Nys,double *sol,double *sol_old,double *res,
+									double beta){
+	int index = blockIdx.x*blockDim.x + threadIdx.x;
+  int stride = blockDim.x*gridDim.x;
+	save_sol_old(Nxs,Nys,sol,sol_old); // Save current values for convergence checking
+	for(int k=index;k<4;k+=stride){
+		solver(Nxs,Nys,sol,k,beta);
+	}
+	get_residuals(Nxs,Nys,sol,sol_old,res);
+}
+
+void parallel_solver(int Nxs,int Nys,double *sol,double *sol_old,double *res,
+										 int iter,double beta,double eps,int blocksPerGrid,
+										 int threadsPerBlock){
+	double res_val;
+	for(int loop=0;loop<iter;loop++){
+		// Calculate one iteration for each region
+		iterate_once<<<blocksPerGrid,threadsPerBlock>>>(Nxs,Nys,sol,sol_old,res,beta);
+		cudaDeviceSynchronize();
+		
+		// for(int k=0;k<4;k++){
+			// printf("%d\n",k);
+			// print_2d_array(Nxs,Nys,k,sol);
+			// putchar('\n');
+			// print_2d_array(Nxs-2,Nys-2,k,sol_old);
+			// putchar('\n');
+			// print_2d_array(Nxs-2,Nys-2,k,res);
+			// putchar('\n');
+		// }
+		// getchar();
+		
+		// Check convergence
+		res_val = sum_residuals(Nxs-2,Nys-2,res);
+		if(res_val <= eps){
+			puts("Convergence!");
+			break;
+		}
+		
+		printf("Iteration %d | Residuals = %f\n",loop+1,res_val);
+		
+		// Update phantom boundary conditions
+		phantom_boundary_conditions<<<blocksPerGrid,threadsPerBlock>>>(Nxs,Nys,sol);
+		cudaDeviceSynchronize();
+	}
 }

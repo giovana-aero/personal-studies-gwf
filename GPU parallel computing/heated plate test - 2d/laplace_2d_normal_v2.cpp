@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<math.h>
+#include<ctime>
 // #include<iostream>
 
 /* 
@@ -22,14 +23,17 @@ void initialize(int Nx,int Ny,double **M);
 void solver(int Nx,int Ny,double **sol,int iter,double beta,double eps);
 
 int main(){
+	
+	time_t start, end;
+	time(&start);
 
   // Problem parameters
   double Lx = 1., Ly = 1.;
-  double T_down = 10., T_up = 10.;
+  double T_down = 0., T_up = -100.;
   double T_left = 50., T_right = 50.;
 
   // Mesh parameters
-  int Nx = 50, Ny = 50;
+  int Nx = 102, Ny = 102;
   double deltaX = Lx/((double) Nx);
   double deltaY = Ly/((double) Ny);
   double beta = deltaX/deltaY;
@@ -38,7 +42,7 @@ int main(){
 		sol[i] = new double[Nx];
 
   // Numeric solution configuration
-  int iter = 5000;
+  int iter = 100000;
   double eps = 1e-3;
 	
   // Insert boundary conditions
@@ -60,7 +64,7 @@ int main(){
 
   // Print results to file
   FILE *results;
-  results = fopen("results.txt","w");
+  results = fopen("results_normal.txt","w");
   fprintf(results,"%.8f %.8f ",Lx,Ly);
   for(int i=2;i<Nx;i++)
     fprintf(results,"%.8f ",0.);
@@ -75,7 +79,11 @@ int main(){
 	for(size_t i=0;i<Ny;i++)
 		delete[] sol[i];
 	delete[] sol;
-
+	
+	time(&end);
+	double time_taken = double(end - start);
+	printf("\n%f s\n",(float)(end-start));
+	
   return 0;
 }
 
