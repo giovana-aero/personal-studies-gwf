@@ -1,6 +1,6 @@
 #include<stdio.h>
 #include<ctime>
-#include<iostream>
+// #include<iostream>
 
 /*
 v2 difference: variable domain division
@@ -22,12 +22,11 @@ void phantom_boundary_conditions(int Nxs,int Nys,int divX,int divY,double *sol,
 __device__
 void save_sol_old(int Nxs,int Nys,double *sol,double *sol_old,int size);
 __device__
-void get_residuals(int Nxs,int Nys,double *sol,double *sol_old,double *res);
+void get_residuals(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old,double *res);
 double sum_residuals(int Nxs,int Nys,double *res);
 __global__ 
-void iterate_once(int Nxs,int Nys,double *sol,double *sol_old,double *res,
+void iterate_once(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old,double *res,
 									double beta,int size);
-__global__
 void get_jump_points(int divX,int divY,int *jump_points);
 void parallel_solver(int Nxs,int Nys,int divX,int divY,double *sol,
 										 double *sol_old,double *res,int iter,double beta,
@@ -41,19 +40,19 @@ int main(){
 	
 	// Problem parameters
   double Lx = 1., Ly = 1.;
-  double T_down = 0., T_up = -100.;
+  double T_down = -0., T_up = -100.;
   double T_left = 50., T_right = 50.;
 
   // Mesh parameters
-  int Nx = 202, Ny = 202; // Complete domain (even values)
+  int Nx = 402, Ny = 402; // Complete domain (even values)
   double deltaX = Lx/((double) Nx);
   double deltaY = Ly/((double) Ny);
   double beta = deltaX/deltaY;
 	
 	// Numeric solution configuration
-  int iter = 50000;
+  int iter = 1000000;
   double eps = 1e-3;
-	int divX = 20, divY = 20; // Number of domain divisions
+	int divX = 10, divY = 10; // Number of domain divisions
 	if((Nx-2)%divX != 0){
 		puts("Error: (Nx-2) must be divisible by divX");
 		return 1;
@@ -83,8 +82,6 @@ int main(){
 	// Allocate relevant arrays in GPU memory and initialize
 	int threadsPerBlock = 1024;
 	int blocksPerGrid = (Nxs*Nys*divX*divY+threadsPerBlock-1)/threadsPerBlock;
-	// dim3 threadsPerBlock(threadsPerBlock_,threadsPerBlock_,1);
-	// dim3 blocksPerGrid(blocksPerGrid_,blocksPerGrid_,1);
 	initialize<<<blocksPerGrid,threadsPerBlock>>>(Nxs*Nys*divX*divY,sol);
 	initialize<<<blocksPerGrid,threadsPerBlock>>>((Nxs-2)*(Nys-2)*divX*divY,sol_old);
 	initialize<<<blocksPerGrid,threadsPerBlock>>>((Nxs-2)*(Nys-2)*divX*divY,res);
@@ -92,7 +89,6 @@ int main(){
 	
   // Insert physical boundary conditions
 	physical_boundary_conditions(Nxs,Nys,divX,divY,sol,T_left,T_right,T_up,T_down);
-	// cudaDeviceSynchronize();
 	
   // Obtain solution
   parallel_solver(Nxs,Nys,divX,divY,sol,sol_old,res,iter,beta,eps,blocksPerGrid,threadsPerBlock);
@@ -154,14 +150,13 @@ void initialize(int size,double *M){
 
 __device__
 void solver(int Nx,int Ny,double *sol,int k,double beta){
-	if(threadIdx.x == k){
+	if(blockIdx.x*blockDim.x + threadIdx.x == k){
 		for(int j=1;j<Ny-1;j++){
-			for(int i=1;i<Nx-1;i++){
+			for(int i=1;i<Nx-1;i++)
 				sol[k*Nx*Ny+Ny*j+i] = 1./(2.*(1.+beta*beta))*(sol[k*Nx*Ny+Ny*j+(i+1)] + 
 															sol[k*Nx*Ny+Ny*j+(i-1)] + 
 															beta*beta*sol[k*Nx*Ny+Ny*(j+1)+i] + 
 															beta*beta*sol[k*Nx*Ny+Ny*(j-1)+i]);
-			}
 		}
 	}
 }
@@ -191,8 +186,8 @@ void physical_boundary_conditions(int Nxs,int Nys,int divX,int divY,double *sol,
 }
 
 void vertical_phantom_BC(int Nxs,int Nys,double *sol,int k){
-	for(int j=0;j<Nys;j++){
-		// Left to right
+	for(int j=1;j<Nys-1;j++){
+		// Left to right <-
 		sol[(k+1)*Nxs*Nys+Nys*j+0] = sol[k*Nxs*Nys+Nys*j+(Nxs-2)];			
 		
 		// Right to left
@@ -202,7 +197,7 @@ void vertical_phantom_BC(int Nxs,int Nys,double *sol,int k){
 }
 
 void horizontal_phantom_BC(int Nxs,int Nys,int divX,double *sol,int k){
-	for(int i=1;i<Nxs;i++){
+	for(int i=1;i<Nxs-1;i++){
 		// Lower to upper
 		sol[k*Nxs*Nys+Nys*0+i] = sol[(k+divX)*Nxs*Nys+Nys*(Nys-2)+i];
 		
@@ -225,7 +220,7 @@ void phantom_boundary_conditions(int Nxs,int Nys,int divX,int divY,double *sol,
 	for(int k=0;k<divY*divX-1;k++){
 		if(element_in_array(divY-1,jump_points,k))
 			k++;
-		
+		// printf("%d\n",k);
 		vertical_phantom_BC(Nxs,Nys,sol,k);
 	}
 			
@@ -252,13 +247,13 @@ void save_sol_old(int Nxs,int Nys,double *sol,double *sol_old,int size){
 }
 
 __device__
-void get_residuals(int Nxs,int Nys,double *sol,double *sol_old,double *res){
+void get_residuals(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old,double *res){
 	int index = blockIdx.x*blockDim.x + threadIdx.x;
   int stride = blockDim.x*gridDim.x;
 	int k;
 	int row;
 	int col;
-	for(int i=index;i<(Nxs-2)*(Nys-2);i+=stride){
+	for(int i=index;i<(Nxs-2)*(Nys-2)*divX*divY;i+=stride){
 		k = i/((Nxs-2)*(Nys-2));
 		row = (i - k*(Nxs-2)*(Nys-2))/(Nxs-2);
 		col = i - k*(Nxs-2)*(Nys-2) - (Nys-2)*row;
@@ -267,31 +262,28 @@ void get_residuals(int Nxs,int Nys,double *sol,double *sol_old,double *res){
 	}
 }
 
-double sum_residuals(int Nxs,int Nys,double *res){
+double sum_residuals(int Nxs,int Nys,int divX,int divY,double *res){
 	double res_sum = 0.;
-	for(int i=0;i<Nxs*Nys*4;i++)
+	for(int i=0;i<Nxs*Nys*divX*divY;i++)
 		res_sum += res[i];
 	
 	return res_sum;
 }
 
 __global__ 
-void iterate_once(int Nxs,int Nys,double *sol,double *sol_old,double *res,
+void iterate_once(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old,double *res,
 									double beta,int size){
 	int index = blockIdx.x*blockDim.x + threadIdx.x;
   int stride = blockDim.x*gridDim.x;
 	save_sol_old(Nxs,Nys,sol,sol_old,size); // Save current values for convergence checking
-	for(int k=index;k<size;k+=stride){
+	for(int k=index;k<size;k+=stride)
 		solver(Nxs,Nys,sol,k,beta);
-	}
-	get_residuals(Nxs,Nys,sol,sol_old,res);
+	
+	get_residuals(Nxs,Nys,divX,divY,sol,sol_old,res);
 }
 
-__global__
 void get_jump_points(int divX,int divY,int *jump_points){
-	int index = blockIdx.x*blockDim.x + threadIdx.x;
-  int stride = blockDim.x*gridDim.x;
-	for(int i=index;i<divY-1;i+=stride)
+	for(int i=0;i<divY-1;i++)
 		jump_points[i] = (i+1)*divX-1;
 }
 
@@ -301,16 +293,16 @@ void parallel_solver(int Nxs,int Nys,int divX,int divY,double *sol,
 	double res_val;
 	int *jump_points = new int[divY-1];
 	cudaMallocManaged(&jump_points,sizeof(int)*(divY-1));
-	get_jump_points<<<BpG,TpB>>>(divX,divY,jump_points);
+	get_jump_points(divX,divY,jump_points);
 	cudaDeviceSynchronize();
 	
 	for(int loop=0;loop<iter;loop++){
 		// Calculate one iteration for each region
-		iterate_once<<<BpG,TpB>>>(Nxs,Nys,sol,sol_old,res,beta,divX*divY);
+		iterate_once<<<BpG,TpB>>>(Nxs,Nys,divX,divY,sol,sol_old,res,beta,divX*divY);
 		cudaDeviceSynchronize();
 		
 		// Check convergence
-		res_val = sum_residuals(Nxs-2,Nys-2,res);
+		res_val = sum_residuals(Nxs-2,Nys-2,divX,divY,res);
 		if(loop > 0){
 			if(res_val <= eps){
 				puts("Convergence!");

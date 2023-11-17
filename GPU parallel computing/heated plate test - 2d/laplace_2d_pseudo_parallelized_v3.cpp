@@ -23,7 +23,8 @@ int element_in_array(int size,int *array,int num);
 void phantom_boundary_conditions(int Nxs,int Nys,int divX,int divY,double *sol,
 																 int *jump_points);
 void save_sol_old(int Nxs,int Nys,double *sol,double *sol_old,int k);
-double get_residuals(int Nxs,int Nys,double *sol,double *sol_old);
+double get_residuals(int Nxs,int Nys,int divX,int divY,double *sol,
+										 double *sol_old);
 void get_jump_points(int divX,int divY,int *jump_points);
 void parallel_solver(int Nxs,int Nys,int divX,int divY,double *sol,
 										 double *sol_old,int iter,double beta,double eps);
@@ -203,9 +204,9 @@ void save_sol_old(int Nxs,int Nys,double *sol,double *sol_old,int k){
 	}
 }
 
-double get_residuals(int Nxs,int Nys,double *sol,double *sol_old){
+double get_residuals(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old){
 	double res_sum = 0;
-	for(int k=0;k<4;k++){
+	for(int k=0;k<divX*divY;k++){
 		for(int j=1;j<Nys-1;j++){
 			for(int i=1;i<Nxs-1;i++)
 				res_sum += fabs(sol[k*Nxs*Nys+Nys*j+i] - 
@@ -234,7 +235,7 @@ void parallel_solver(int Nxs,int Nys,int divX,int divY,double *sol,
 		}		
 		
 		// Check convergence
-		res_val=get_residuals(Nxs,Nys,sol,sol_old)
+		res_val=get_residuals(Nxs,Nys,divX,divY,sol,sol_old)
 		if(loop > 1000){
 			if(res_val <= eps){
 				puts("Convergence!");
