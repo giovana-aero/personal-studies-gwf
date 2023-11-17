@@ -22,11 +22,12 @@ void phantom_boundary_conditions(int Nxs,int Nys,int divX,int divY,double *sol,
 __device__
 void save_sol_old(int Nxs,int Nys,double *sol,double *sol_old,int size);
 __device__
-void get_residuals(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old,double *res);
+void get_residuals(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old
+									 ,double *res);
 double sum_residuals(int Nxs,int Nys,double *res);
 __global__ 
-void iterate_once(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old,double *res,
-									double beta,int size);
+void iterate_once(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old,
+									double *res,double beta,int size);
 void get_jump_points(int divX,int divY,int *jump_points);
 void parallel_solver(int Nxs,int Nys,int divX,int divY,double *sol,
 										 double *sol_old,double *res,int iter,double beta,
@@ -83,15 +84,18 @@ int main(){
 	int threadsPerBlock = 1024;
 	int blocksPerGrid = (Nxs*Nys*divX*divY+threadsPerBlock-1)/threadsPerBlock;
 	initialize<<<blocksPerGrid,threadsPerBlock>>>(Nxs*Nys*divX*divY,sol);
-	initialize<<<blocksPerGrid,threadsPerBlock>>>((Nxs-2)*(Nys-2)*divX*divY,sol_old);
+	initialize<<<blocksPerGrid,threadsPerBlock>>>((Nxs-2)*(Nys-2)*divX*divY,
+						sol_old);
 	initialize<<<blocksPerGrid,threadsPerBlock>>>((Nxs-2)*(Nys-2)*divX*divY,res);
 	cudaDeviceSynchronize();
 	
   // Insert physical boundary conditions
-	physical_boundary_conditions(Nxs,Nys,divX,divY,sol,T_left,T_right,T_up,T_down);
+	physical_boundary_conditions(Nxs,Nys,divX,divY,sol,T_left,T_right,T_up,
+															 T_down);
 	
   // Obtain solution
-  parallel_solver(Nxs,Nys,divX,divY,sol,sol_old,res,iter,beta,eps,blocksPerGrid,threadsPerBlock);
+  parallel_solver(Nxs,Nys,divX,divY,sol,sol_old,res,iter,beta,eps,blocksPerGrid,
+									threadsPerBlock);
 	cudaDeviceSynchronize();
 
   // Print results to file
@@ -247,7 +251,8 @@ void save_sol_old(int Nxs,int Nys,double *sol,double *sol_old,int size){
 }
 
 __device__
-void get_residuals(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old,double *res){
+void get_residuals(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old
+									 ,double *res){
 	int index = blockIdx.x*blockDim.x + threadIdx.x;
   int stride = blockDim.x*gridDim.x;
 	int k;
@@ -271,11 +276,11 @@ double sum_residuals(int Nxs,int Nys,int divX,int divY,double *res){
 }
 
 __global__ 
-void iterate_once(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old,double *res,
-									double beta,int size){
+void iterate_once(int Nxs,int Nys,int divX,int divY,double *sol,double *sol_old,
+									double *res,double beta,int size){
 	int index = blockIdx.x*blockDim.x + threadIdx.x;
   int stride = blockDim.x*gridDim.x;
-	save_sol_old(Nxs,Nys,sol,sol_old,size); // Save current values for convergence checking
+	save_sol_old(Nxs,Nys,sol,sol_old,size); // Save values - convergence checking
 	for(int k=index;k<size;k+=stride)
 		solver(Nxs,Nys,sol,k,beta);
 	

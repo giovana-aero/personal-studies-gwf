@@ -65,11 +65,13 @@ int main(){
 	cudaDeviceSynchronize();
 	
   // Insert physical boundary conditions
-	physical_boundary_conditions<<<blocksPerGrid,threadsPerBlock>>>(Nxs,Nys,sol,T_left,T_right,T_up,T_down);
+	physical_boundary_conditions<<<blocksPerGrid,threadsPerBlock>>>(Nxs,Nys,sol,
+															T_left,T_right,T_up,T_down);
 	cudaDeviceSynchronize();
 	
   // Obtain solution
-  parallel_solver(Nxs,Nys,sol,sol_old,res,iter,beta,eps,blocksPerGrid,threadsPerBlock);
+  parallel_solver(Nxs,Nys,sol,sol_old,res,iter,beta,eps,blocksPerGrid,
+									threadsPerBlock);
 	cudaDeviceSynchronize();
 
   // Print results to file
@@ -275,7 +277,8 @@ void parallel_solver(int Nxs,int Nys,double *sol,double *sol_old,double *res,
 	double res_val;
 	for(int loop=0;loop<iter;loop++){
 		// Calculate one iteration for each region
-		iterate_once<<<blocksPerGrid,threadsPerBlock>>>(Nxs,Nys,sol,sol_old,res,beta);
+		iterate_once<<<blocksPerGrid,threadsPerBlock>>>(Nxs,Nys,sol,sol_old,res,
+								beta);
 		cudaDeviceSynchronize();
 		
 		// for(int k=0;k<4;k++){
