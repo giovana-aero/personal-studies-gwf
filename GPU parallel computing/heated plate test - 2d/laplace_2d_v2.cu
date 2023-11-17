@@ -63,7 +63,7 @@ int main(){
 		return 2;
 	}
 	
-	// Initialize arrays
+	// Allocate relevant arrays in GPU memory
 	Nx = (int) (Nx/2)*2; // Ensure values are even
 	Ny = (int) (Ny/2)*2;
 	int Nxs = (Nx-2)/divX+2; // Dimensions for the submatrices
@@ -80,7 +80,7 @@ int main(){
 	cudaMallocManaged(&sol_old,sizeof(double)*(Nxs-2)*(Nys-2)*divX*divY);
 	cudaMallocManaged(&res,sizeof(double)*(Nxs-2)*(Nys-2)*divX*divY);
 	
-	// Allocate relevant arrays in GPU memory and initialize
+	// Initialize arrays
 	int threadsPerBlock = 1024;
 	int blocksPerGrid = (Nxs*Nys*divX*divY+threadsPerBlock-1)/threadsPerBlock;
 	initialize<<<blocksPerGrid,threadsPerBlock>>>(Nxs*Nys*divX*divY,sol);
@@ -96,7 +96,6 @@ int main(){
   // Obtain solution
   parallel_solver(Nxs,Nys,divX,divY,sol,sol_old,res,iter,beta,eps,blocksPerGrid,
 									threadsPerBlock);
-	cudaDeviceSynchronize();
 
   // Print results to file
   print_results(Nx,Ny,Nxs,Nys,divX,divY,Lx,Ly,sol);

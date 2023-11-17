@@ -42,7 +42,7 @@ int main(){
   int iter = 50000;
   double eps = 1e-3;
 	
-	// Initialize arrays
+	// Allocate relevant arrays in GPU memory
 	Nx = (int) (Nx/2)*2; // Ensure values are even
 	Ny = (int) (Ny/2)*2;
 	int Nxs = Nx/2+1; // Dimensions for the submatrices
@@ -54,7 +54,7 @@ int main(){
 	cudaMallocManaged(&sol_old,sizeof(double)*4*(Nxs-2)*(Nys-2));
 	cudaMallocManaged(&res,sizeof(double)*4*(Nxs-2)*(Nys-2));
 	
-	// Allocate relevant arrays in GPU memory and initialize
+	// Initialize arrays
 	int threadsPerBlock = 256;
 	int blocksPerGrid = (4*Nxs*Nys+threadsPerBlock-1)/threadsPerBlock;
 	// dim3 threadsPerBlock(threadsPerBlock_,threadsPerBlock_,1);
