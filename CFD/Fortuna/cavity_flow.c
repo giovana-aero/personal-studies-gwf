@@ -18,7 +18,157 @@ Adicionei também algumas paralelizações com openmp que parecem não ter
 eficácia - mas isso também pode ser efeito dos poucos núcleos da CPU que tenho
 em mãos no momento. Só não implementei ainda no solucionador PSOR, que é o ponto
 mais crítico desse código.
+
+gigi, 01 de fevereiro de 2024, 1941 horas
 */
+
+double **initialize(int Nx,int Ny);
+double get_abs_max(double **X,int Nx,int Ny);
+double get_deltat(double *deltat,double **umat,double **vmat,int Nx,int Ny,
+                  double deltax,double deltay,double nu,double tau);
+void save_old_values(double **umat,double **vmat,double **umat_old,
+                     double **vmat_old,int Nx,int Ny);
+void boundary_conditions(double **umat,double **vmat,int Nx,int Ny,double u0);
+double upwind(double ue,double **mat,int i,int j,int op);
+double central_differences(double **mat,int i,int j,int op);
+double hybrid_scheme(double **mat,double delta,double nu,int i,int j,int op);
+void conv_F(double *conv,double **umat,double **vmat,double deltax,
+            double deltay,double nu,int i,int j);
+void visc_F(double *visc,double **umat,double deltax,double deltay,double nu,
+            int i,int j);
+void get_F(double **Fmat,double **umat,double **vmat,int Nx,int Ny,
+           double deltax,double deltay,double deltat,double nu);
+void conv_G(double *conv,double **umat,double **vmat,double deltax,
+            double deltay,double nu,int i,int j);
+void visc_G(double *visc,double **vmat,double deltax,double deltay,double nu,
+            int i,int j);
+void get_G(double **Gmat,double **umat,double **vmat,int Nx,int Ny,
+           double deltax,double deltay,double deltat,double nu);
+void erase_FG_boundaries(double **Fmat,double **Gmat,int Nx,int Ny);
+void save_pmat(double **pmat,double **pmat_old,int Nx,int Ny);
+void solve_poisson(double **pmat,double **Fmat,double **Gmat,double **pmat_old,
+                   int Nx,int Ny,double deltax,double deltay,double deltat,
+                   int iterp,double epsp,double rho,double omega,int loop);
+void get_uv(double **umat,double **vmat,double **pmat,double **Fmat,
+            double **Gmat,int Nx,int Ny,double deltax,double deltay,
+            double deltat,double rho);
+int check_convergence(double **umat,double **vmat,double **umat_old,
+                      double **vmat_old,int Nx,int Ny,double eps,double deltat);
+void free_memory(double **X,int Ny);
+void unstaggered_umat(double **umat,double **umat_straight,int Nx,int Ny);
+void unstaggered_vmat(double **vmat,double **vmat_straight,int Nx,int Ny);
+void print_results(double **pmat,double **umat,double **vmat,int Nx,int Ny,
+                   double lx,double ly);
+
+int main(){
+
+  // Dados da malha
+  double lx = 1.;
+  double ly = 1.;
+  int Nx = 20; // Número de nós
+  int Ny = 20;
+  double deltax = lx/((double) Nx);
+  double deltay = ly/((double) Ny);
+
+  // Propriedades do fluido
+  // Água a 20°C
+  // https://www.thermexcel.com/english/tables/eau_atm.htm
+  // (Nota posterior: se a intenção for usar água nesse problema em específico,
+  // será preciso abaixar drasticamente o número de Reynolds alterando-se os
+  // valores da altura da caixa e/ou da velocidade da tampa
+  double mu = 10;
+  double rho = 1;
+  double nu = mu/rho;
+
+  // Configurações da solução geral
+  double u0 = 1.; // Velocidade da tampa
+  double tau = 1.; // Fator de segurança pro cálculo de deltat
+  double deltat;
+  int iter = 5000;
+  double eps = 1e-6;
+
+  // Configurações do PSOR
+  int iterp = 50000;
+  double epsp = 1e-8;
+  double omega = 1;
+
+  // Matrizes
+  double **pmat = initialize(Nx,Ny);
+  double **umat = initialize(Nx,Ny);
+  double **vmat = initialize(Nx,Ny);
+  double **Fmat = initialize(Nx,Ny);
+  double **Gmat = initialize(Nx,Ny);
+  double **pmat_old = initialize(Nx,Ny);
+  double **umat_old = initialize(Nx,Ny);
+  double **vmat_old = initialize(Nx,Ny);
+  double **umat_straight = initialize(Nx,Ny);
+  double **vmat_straight = initialize(Nx,Ny);
+
+  for(int loop=1;loop<=iter;loop++){
+    save_old_values(umat,vmat,umat_old,vmat_old,Nx,Ny);
+
+    // Aplicar condições de contorno
+    boundary_conditions(umat,vmat,Nx,Ny,u0);
+    get_deltat(&deltat,umat,vmat,Nx,Ny,deltax,deltay,nu,tau);
+
+    // Calcular valores de F e G
+    get_F(Fmat,umat,vmat,Nx,Ny,deltax,deltay,deltat,nu);
+    get_G(Gmat,umat,vmat,Nx,Ny,deltax,deltay,deltat,nu);
+
+    // Zerar os valores de F e G nas fronteiras
+    erase_FG_boundaries(Fmat,Gmat,Nx,Ny);
+
+    // Resolver a equação de Poisson
+    solve_poisson(pmat,Fmat,Gmat,pmat_old,Nx,Ny,deltax,deltay,deltat,iterp,epsp,
+                  rho,omega,loop);
+
+    // Obter novas velocidades
+    get_uv(umat,vmat,pmat,Fmat,Gmat,Nx,Ny,deltax,deltay,deltat,rho);
+
+    // printf("Iteration %d\n",loop);
+
+    // Checar convergência
+    if(check_convergence(umat,vmat,umat_old,vmat_old,Nx,Ny,eps,deltat)){
+      puts("<< Solution convergence >>");
+      break;
+    }
+
+  }
+
+  // Obter velocidades pra malha não deslocada
+  unstaggered_umat(umat,umat_straight,Nx,Ny);
+  unstaggered_vmat(vmat,vmat_straight,Nx,Ny);
+
+  // for(int j=0;j<Ny;j++){
+  //   for(int i=0;i<Nx;i++){
+  //     printf("%.2f ",umat_straight[j][i]);
+  //   }
+  //   putchar('\n');
+  // }
+  // putchar('\n');
+  // for(int j=0;j<Ny;j++){
+  //   for(int i=0;i<Nx;i++){
+  //     printf("%.2f ",vmat_straight[j][i]);
+  //   }
+  //   putchar('\n');
+  // }
+
+  // Imprimir resultados
+  print_results(pmat,umat_straight,vmat_straight,Nx,Ny,lx,ly);
+
+  // Liberar memória
+  free_memory(pmat,Ny);
+  free_memory(umat,Ny);
+  free_memory(vmat,Ny);
+  free_memory(Fmat,Ny);
+  free_memory(Gmat,Ny);
+  free_memory(umat_old,Ny);
+  free_memory(vmat_old,Ny);
+  free_memory(umat_straight,Ny);
+  free_memory(vmat_straight,Ny);
+
+  return 0;
+}
 
 double **initialize(int Nx,int Ny){
   double **X = (double**) malloc(sizeof(double*)*Ny);
@@ -392,114 +542,4 @@ void print_results(double **pmat,double **umat,double **vmat,int Nx,int Ny,
   fclose(results1);
   fclose(results2);
   fclose(results3);
-}
-
-int main(){
-
-  // Dados da malha
-  double lx = 1.;
-  double ly = 1.;
-  int Nx = 20; // Número de nós
-  int Ny = 20;
-  double deltax = lx/((double) Nx);
-  double deltay = ly/((double) Ny);
-
-  // Propriedades do fluido
-  // Água a 20°C
-  // https://www.thermexcel.com/english/tables/eau_atm.htm
-  // (Nota posterior: se a intenção for usar água nesse problema em específico,
-  // será preciso abaixar drasticamente o número de Reynolds alterando-se os
-  // valores da altura da caixa e/ou da velocidade da tampa
-  double mu = 10;
-  double rho = 1;
-  double nu = mu/rho;
-
-  // Configurações da solução geral
-  double u0 = 0.1; // Velocidade da tampa
-  double tau = 1.; // Fator de segurança pro cálculo de deltat
-  double deltat;
-  int iter = 5000;
-  double eps = 1e-6;
-
-  // Configurações do PSOR
-  int iterp = 50000;
-  double epsp = 1e-8;
-  double omega = 1;
-
-  // Matrizes
-  double **pmat = initialize(Nx,Ny);
-  double **umat = initialize(Nx,Ny);
-  double **vmat = initialize(Nx,Ny);
-  double **Fmat = initialize(Nx,Ny);
-  double **Gmat = initialize(Nx,Ny);
-  double **pmat_old = initialize(Nx,Ny);
-  double **umat_old = initialize(Nx,Ny);
-  double **vmat_old = initialize(Nx,Ny);
-  double **umat_straight = initialize(Nx,Ny);
-  double **vmat_straight = initialize(Nx,Ny);
-
-  for(int loop=1;loop<=iter;loop++){
-    save_old_values(umat,vmat,umat_old,vmat_old,Nx,Ny);
-
-    // Aplicar condições de contorno
-    boundary_conditions(umat,vmat,Nx,Ny,u0);
-    get_deltat(&deltat,umat,vmat,Nx,Ny,deltax,deltay,nu,tau);
-
-    // Calcular valores de F e G
-    get_F(Fmat,umat,vmat,Nx,Ny,deltax,deltay,deltat,nu);
-    get_G(Gmat,umat,vmat,Nx,Ny,deltax,deltay,deltat,nu);
-
-    // Zerar os valores de F e G nas fronteiras
-    erase_FG_boundaries(Fmat,Gmat,Nx,Ny);
-
-    // Resolver a equação de Poisson
-    solve_poisson(pmat,Fmat,Gmat,pmat_old,Nx,Ny,deltax,deltay,deltat,iterp,epsp,
-                  rho,omega,loop);
-
-    // Obter novas velocidades
-    get_uv(umat,vmat,pmat,Fmat,Gmat,Nx,Ny,deltax,deltay,deltat,rho);
-
-    // printf("Iteration %d\n",loop);
-
-    // Checar convergência
-    if(check_convergence(umat,vmat,umat_old,vmat_old,Nx,Ny,eps,deltat)){
-      puts("<< Solution convergence >>");
-      break;
-    }
-
-  }
-
-  // Obter velocidades pra malha não deslocada
-  unstaggered_umat(umat,umat_straight,Nx,Ny);
-  unstaggered_vmat(vmat,vmat_straight,Nx,Ny);
-
-  // for(int j=0;j<Ny;j++){
-  //   for(int i=0;i<Nx;i++){
-  //     printf("%.2f ",umat_straight[j][i]);
-  //   }
-  //   putchar('\n');
-  // }
-  // putchar('\n');
-  // for(int j=0;j<Ny;j++){
-  //   for(int i=0;i<Nx;i++){
-  //     printf("%.2f ",vmat_straight[j][i]);
-  //   }
-  //   putchar('\n');
-  // }
-
-  // Imprimir resultados
-  print_results(pmat,umat_straight,vmat_straight,Nx,Ny,lx,ly);
-
-  // Liberar memória
-  free_memory(pmat,Ny);
-  free_memory(umat,Ny);
-  free_memory(vmat,Ny);
-  free_memory(Fmat,Ny);
-  free_memory(Gmat,Ny);
-  free_memory(umat_old,Ny);
-  free_memory(vmat_old,Ny);
-  free_memory(umat_straight,Ny);
-  free_memory(vmat_straight,Ny);
-
-  return 0;
 }
