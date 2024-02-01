@@ -18,8 +18,6 @@ Adicionei também algumas paralelizações com openmp que parecem não ter
 eficácia - mas isso também pode ser efeito dos poucos núcleos da CPU que tenho
 em mãos no momento. Só não implementei ainda no solucionador PSOR, que é o ponto
 mais crítico desse código.
-
-gigi, 01 de fevereiro de 2024, 1941 horas
 */
 
 double **initialize(int Nx,int Ny){
