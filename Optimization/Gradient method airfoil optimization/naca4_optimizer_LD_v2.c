@@ -3,6 +3,12 @@
 #include<stdlib.h>
 #include<unistd.h>
 
+/*
+
+Parâmetros alterados na otimização: m, p, t
+
+*/
+
 #define pi 3.141592653589793
 
 void opt_func(double *LD,double *airfoil_data,double *params,int numPoints);
@@ -15,10 +21,11 @@ void naca4(double *airfoil_data,int numPoints);
 int main(){
 
   // Airfoil data
- double airfoil_data[] = {2.,4.,12.};
+  double airfoil_data[] = {2.,4.,12.};
   // double airfoil_data[] = {10.630163,5.714319,4.130613};
   int numPoints = 100; // Total
-  naca4(airfoil_data,numPoints); system("mv coordinates.dat original_coordinates.dat");
+  naca4(airfoil_data,numPoints);
+  system("mv coordinates.dat original_coordinates.dat");
 
   // Simulation parameters
   double iter = 50;
@@ -168,7 +175,8 @@ void run_xfoil(double *LD,double Re,double alpha,int iter){
       break;
   }
 
-  fscanf(polar,"%lf %lf %lf %lf %lf %lf %lf %lf %lf\n",&v[0],&v[1],&v[2],&v[3],&v[4],&v[5],&v[6],&v[7],&v[8]);
+  fscanf(polar,"%lf %lf %lf %lf %lf %lf %lf %lf %lf\n",&v[0],&v[1],&v[2],&v[3],
+         &v[4],&v[5],&v[6],&v[7],&v[8]);
 
   // printf("%f %f\n",v[1],v[2]);
 
@@ -183,7 +191,7 @@ void cosspace(double *vec,double length,int numPoints){
     double midPoint = length/2.;
     double angleInc = pi/(((double) numPoints) - 1.);
     double curAngle = angleInc;
-		
+
 		vec[0] = 0;
     for(int i=1;i<numPoints;i++){
         vec[i] = midPoint*(1.-cos(curAngle));
@@ -210,8 +218,9 @@ void naca4(double *airfoil_data,int numPoints){
   double a4 = -0.1015;
   double yVecThickness[numPoints];
   for(int i=0;i<numPoints;i++){
-      yVecThickness[i] = 5.*t*(a0*pow(xVec[i],0.5) + a1*xVec[i] + a2*pow(xVec[i],2.) +
-                         a3*pow(xVec[i],3.) + a4*pow(xVec[i],4.));
+      yVecThickness[i] = 5.*t*(a0*pow(xVec[i],0.5) + a1*xVec[i] +
+                         a2*pow(xVec[i],2.) + a3*pow(xVec[i],3.) +
+                         a4*pow(xVec[i],4.));
   }
 
   double xUpper[numPoints];
@@ -236,7 +245,8 @@ void naca4(double *airfoil_data,int numPoints){
               yVecCurvature[i] = m/pow(p,2.)*(2.*p*xVec[i] - pow(xVec[i],2.));
 
           else if(xVec[i] >= p && xVec[i] <= 1)
-              yVecCurvature[i] = m/pow(1.-p,2.)*((1. - 2.*p) + 2.*p*xVec[i] - pow(xVec[i],2.));
+              yVecCurvature[i] = m/pow(1.-p,2.)*((1. - 2.*p) + 2.*p*xVec[i] -
+                                 pow(xVec[i],2.));
       }
 
       double slope[numPoints];
@@ -260,7 +270,7 @@ void naca4(double *airfoil_data,int numPoints){
       }
 
   }
-	
+
 	/* Imprimir arquivo de coordenadas */
 	FILE *fp;
 	fp = fopen("coordinates.dat","w");
