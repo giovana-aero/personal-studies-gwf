@@ -12,6 +12,10 @@ def remove_boundaries(mat,Nx,Ny):
 
     return mat
 
+# Normalizar vetores no gráfico de magnitude de velocidade?
+normalize_vectors = 1
+
+
 data = np.genfromtxt("cavity_flow_p.txt",delimiter = ' ')
 lx = data[0,0]
 ly = data[0,1]
@@ -51,9 +55,18 @@ bar = plt.colorbar()
 bar.ax.set_ylabel("Vertical velocity [m/s]")
 # plt.show()
 
+if normalize_vectors:
+    for j in range(Ny):
+        for i in range(Nx):
+            if V[j,i] == 0: V[j,i] = 1
+    umat = np.divide(umat,V)
+    vmat = np.divide(vmat,V)
+
+remove_boundaries(V,Nx,Ny)
+
 plt.figure()
 fig4 = plt.contourf(X,Y,V)
 bar = plt.colorbar()
 bar.ax.set_ylabel("Velocity magnitude [m/s]")
-plt.quiver(X,Y,umat,vmat,scale=5)
+plt.quiver(X,Y,umat,vmat)
 plt.show()
