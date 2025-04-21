@@ -9,15 +9,7 @@ Escoamento em uma cavidade
 
 Número de Reynolds aqui definido como Re = u0*H/nu, onde H é a altura da
 cavidade.
-Depois de passar muita raiva procurando erros que não existiam no código,
-entendi enfim que esse solucionador quebra com números de Reynolds altos - não
-testei muito a fundo realmente, mas se o Reynolds tem mais de três dígitos é
-improvável que o solucionador obtenha convergência.
 
-Adicionei também algumas paralelizações com openmp que parecem não ter
-eficácia - mas isso também pode ser efeito dos poucos núcleos da CPU que tenho
-em mãos no momento. Só não implementei ainda no solucionador PSOR, que é o ponto
-mais crítico desse código.
 */
 
 double **initialize(int Nx,int Ny);
